@@ -817,8 +817,8 @@ mp.observe_property("duration", "number", function(_, val)
         videoSlider.startFile.icon = '' .. s
         videoSlider.endFile.icon = '' .. e
         -- time.len = Element:bounds(e, state.font_size)
-        state.visible = true
-        state.timer:kill()
+        -- state.visible = true
+        -- state.timer:kill()
         render()
     end
 end)
