@@ -818,15 +818,19 @@ mp.observe_property("duration", "number", function(_, val)
         videoSlider.endFile.icon = '' .. e
         -- time.len = Element:bounds(e, state.font_size)
         -- state.visible = true
+        -- state.timer = mp.add_timeout(0, hide)
         -- state.timer:kill()
-        render()
+        -- render()
+        if state.startFileVisble then
+            Element:button(true, videoSlider.endFile, state)
+        end
     end
 end)
 
-mp.observe_property('mouse-pos', 'native', function(_, val)
-    -- hover(val.x, val.y)
-    -- render()
-end)
+-- mp.observe_property('mouse-pos', 'native', function(_, val)
+--     -- hover(val.x, val.y)
+--     -- render()
+-- end)
 
 mp.observe_property("pause", "bool", function(_, val)
     if buttons.play.x == 0 then return end
