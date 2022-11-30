@@ -632,7 +632,7 @@ function render()
         buttons.audio.x = buttons.play.x + state.size + state.marginX
         buttons.sub.x = buttons.audio.x + state.size + state.marginX
         buttons.volume.x = buttons.sub.x + state.size + state.marginX
-        -- buttons.volume.icon = vol_icon()
+        buttons.volume.icon = vol_icon()
         buttons.quit.x = panel_x + panel_w - state.size - state.marginX / 2
         for _, v in pairs(buttons) do
             Element:button(true, v, state)
@@ -648,7 +648,6 @@ function render()
             h = state.panel_h,
             z = 100,
         }, state)
-
         -- videlSlider
         ---- startFile
         local startFileX = buttons.volume.x + state.size + state.marginX
@@ -877,18 +876,20 @@ end)
 mp.observe_property("volume", 'number', function(_, val)
     state.volume = val
     -- if state.vol_open then
-    Element:panel(true, vol.volsliderBar, state, not state.vol_open)
-    vol.volsliderTxt.icon = state.volume
-    Element:button(true, vol.volsliderTxt, state, not state.vol_open)
-    vol.volicon.icon = vol_icon()
-    Element:button(true, vol.volicon, state, not state.vol_open)
-    vol.volsliderBar.x = vol.volslider.x + val * 2 - vol.volsliderBar.w / 2
-    Element:panel(true, vol.volsliderBar, state, not state.vol_open)
     if buttons.volume.x ~= 0 then
-        buttons.volume.icon = vol_icon()
-        Element:button(true, buttons.volume, state, not state.keep)
+        Element:panel(true, vol.volsliderBar, state, not state.vol_open)
+        vol.volsliderTxt.icon = state.volume
+        Element:button(true, vol.volsliderTxt, state, not state.vol_open)
+        vol.volicon.icon = vol_icon()
+        Element:button(true, vol.volicon, state, not state.vol_open)
+        vol.volsliderBar.x = vol.volslider.x + val * 2 - vol.volsliderBar.w / 2
+        Element:panel(true, vol.volsliderBar, state, not state.vol_open)
+        if state.enable then
+            buttons.volume.icon = vol_icon()
+            Element:button(true, buttons.volume, state)
+        end
     end
-    
+
     -- end
 end)
 
