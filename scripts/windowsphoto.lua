@@ -339,7 +339,11 @@ function button_click(name)
             extra_panel_render('sub', subs_audios['sub'])
         end,
         volume = function()
-            vol_panel_render(buttons['volume'], state, vol)
+            if state.vol_open then
+                vol_panel_hide(vol, state)
+            else
+                vol_panel_render(buttons['volume'], state, vol)
+            end
         end
     }
     local isExit = switchStr[name]
@@ -628,6 +632,7 @@ function render()
         buttons.audio.x = buttons.play.x + state.size + state.marginX
         buttons.sub.x = buttons.audio.x + state.size + state.marginX
         buttons.volume.x = buttons.sub.x + state.size + state.marginX
+        -- buttons.volume.icon = vol_icon()
         buttons.quit.x = panel_x + panel_w - state.size - state.marginX / 2
         for _, v in pairs(buttons) do
             Element:button(true, v, state)
@@ -695,8 +700,6 @@ function render()
         local x = mouse_pos.x * 720 / state.osd_h
         local y = mouse_pos.y * 720 / state.osd_h
 
-        local x1, y1 = math.floor(state.osd_w * 0.2), math.floor(state.osd_h * 0.8)
-        local x2, y2 = x1 + math.floor(state.osd_w * 0.6), y1 + math.floor(state.osd_h / 720 * state.panel_h)
         state.keep = hit(x, y, state.panel_x, state.panel_y, state.panel_x + state.panel_w, state.panel_y + state.panel_h)
             or
             (
@@ -879,18 +882,15 @@ mp.observe_property("volume", 'number', function(_, val)
     Element:button(true, vol.volsliderTxt, state, not state.vol_open)
     vol.volicon.icon = vol_icon()
     Element:button(true, vol.volicon, state, not state.vol_open)
-    buttons.volume.icon = vol_icon()
-    Element:button(true, buttons.volume, state, not state.vol_open)
     vol.volsliderBar.x = vol.volslider.x + val * 2 - vol.volsliderBar.w / 2
     Element:panel(true, vol.volsliderBar, state, not state.vol_open)
+    if buttons.volume.x ~= 0 then
+        buttons.volume.icon = vol_icon()
+        Element:button(true, buttons.volume, state, not state.keep)
+    end
+    
     -- end
 end)
-
--- mp.observe_property("demuxer-cache-state", 'native', function(name, val)
---         for k, v in pairs(val) do
---             print(k, v)
---         end
--- end)
 
 mp.register_script_message("thumbfast-info", function(json)
     local data = utils.parse_json(json)
