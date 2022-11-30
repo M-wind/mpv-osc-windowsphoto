@@ -349,166 +349,150 @@ end
 
 function click(action)
 
-    local mouse_pos = mp.get_property_native('mouse-pos')
+    if state.keep then
+        local mouse_pos = mp.get_property_native('mouse-pos')
+        local x = math.floor(mouse_pos.x * 720 / state.osd_h)
+        local y = math.floor(mouse_pos.y * 720 / state.osd_h)
 
-    if action == 'mbtn_left_up' then
-        -- main button
-        local bound = math.floor(state.osd_h / 720 * state.size)
-        for n, v in pairs(buttons) do
-            local x, y = math.floor(state.osd_h / 720 * v.x), math.floor(state.osd_h / 720 * v.y)
-            if hit(mouse_pos.x, mouse_pos.y, x, y, x + bound, y + bound) then
-                button_click(n)
+        if action == 'mbtn_left_up' then
+            -- main buttons
+            for n, v in pairs(buttons) do
+                if hit(x, y, v.x, v.y, v.x + state.size, v.y + state.size) then
+                    button_click(n)
+                end
             end
-        end
 
-        local count = state.ccOrAudio == 'sub' and subs_audios[state.ccOrAudio].count + 100 or
-            subs_audios[state.ccOrAudio].count
-        -- sub and audio
-        if state.ccOeAudio_open and count > 1 and subs_audios[state.ccOrAudio].data[1] and
-            subs_audios[state.ccOrAudio].data[1].x then
-            for _, v in pairs(subs_audios[state.ccOrAudio].data) do
-                local x, y, w, h = math.floor(state.osd_h / 720 * (v.x and v.x or 0)),
-                    math.floor(state.osd_h / 720 * (v.y and v.y or 0)),
-                    math.floor(state.osd_h / 720 * (v.w and v.w or 0)),
-                    math.floor(state.osd_h / 720 * (v.h and v.h or 0))
-                if not v.selected and hit(mouse_pos.x, mouse_pos.y, x, y, x + w, y + h) then
-                    -- v.selected = true
-                    exetral_panel_hide()
-                    if v.id == 'load' then
-                        open_file_dialog()
-                    else
-                        mp.commandv('set', state.ccOrAudio, v.id)
+            local count = state.ccOrAudio == 'sub' and subs_audios[state.ccOrAudio].count + 100 or
+                subs_audios[state.ccOrAudio].count
+            if state.ccOeAudio_open and count > 1 and subs_audios[state.ccOrAudio].data[1] and
+                subs_audios[state.ccOrAudio].data[1].x then
+                for _, v in pairs(subs_audios[state.ccOrAudio].data) do
+                    local x0, y0, w, h = v.x and v.x or 0, v.y and v.y or 0, v.w and v.w or 0, v.h and v.h or 0
+                    if not v.selected and hit(x, y, x0, y0, x0 + w, y0 + h) then
+                        -- v.selected = true
+                        exetral_panel_hide()
+                        if v.id == 'load' then
+                            open_file_dialog()
+                        else
+                            mp.commandv('set', state.ccOrAudio, v.id)
+                        end
                     end
                 end
             end
-            -- exetral_panel_hide()
-            -- extra_panel_render(state.ccOrAudio, subs_audios[state.ccOrAudio])
-        end
 
-        -- 音量滑轨点击
-        if vol.volslider.x ~= 0 and state.vol_open then
-            if hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * vol.volslider.x),
-                math.floor(state.osd_h / 720 * vol.volslider.y), math.floor(state.osd_h / 720 * vol.volslider.x1),
-                math.floor(state.osd_h / 720 * vol.volslider.y1)) then
-                local len = mouse_pos.x - math.floor(state.osd_h / 720 * vol.volslider.x)
-                len = math.floor(len * 720 / state.osd_h)
-                state.volume = math.floor(len / 2)
-                vol.volsliderBar.x = vol.volslider.x + len - vol.volsliderBar.w / 2
-                mp.commandv('set', 'volume', state.volume)
+            -- 音量滑轨点击
+            if vol.volslider.x ~= 0 and state.vol_open then
+                if hit(x, y, vol.volslider.x, vol.volslider.y, vol.volslider.x1, vol.volslider.y1) then
+                    local len = mouse_pos.x - math.floor(state.osd_h / 720 * vol.volslider.x)
+                    len = math.floor(len * 720 / state.osd_h)
+                    state.volume = math.floor(len / 2)
+                    vol.volsliderBar.x = vol.volslider.x + len - vol.volsliderBar.w / 2
+                    mp.commandv('set', 'volume', state.volume)
+                end
+            end
+
+            -- 视频滑轨点击
+            if videoSlider.sliderLow.x > 0 then
+                if hit(x, y, videoSlider.sliderLow.x, videoSlider.sliderLow.y,
+                    videoSlider.sliderLow.x + videoSlider.sliderLow.w, videoSlider.sliderLow.y + videoSlider.sliderLow.h) then
+                    local len     = mouse_pos.x - math.floor(state.osd_h / 720 * videoSlider.sliderLow.x)
+                    len           = math.floor(len * 720 / state.osd_h)
+                    local seconds = math.floor(len * time.seconds / videoSlider.sliderLow.w)
+                    mp.commandv('seek', seconds, 'absolute')
+                end
+            end
+
+            -- vol-panel-icon
+            if vol.volicon.x > 0 and state.vol_open and
+                hit(x, y, vol.volicon.x, vol.volicon.y, vol.volicon.x1, vol.volicon.y1) then
+                mp.commandv('cycle', 'mute')
             end
         end
 
-        -- 视频滑轨点击
-        if videoSlider.sliderLow.x > 0 then
-            if hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * videoSlider.sliderLow.x),
-                math.floor(state.osd_h / 720 * videoSlider.sliderLow.y),
-                math.floor(state.osd_h / 720 * (videoSlider.sliderLow.x + videoSlider.sliderLow.w)),
-                math.floor(state.osd_h / 720 * (videoSlider.sliderLow.y + videoSlider.sliderLow.h))) then
-                local len     = mouse_pos.x - math.floor(state.osd_h / 720 * videoSlider.sliderLow.x)
-                len           = math.floor(len * 720 / state.osd_h)
-                local seconds = math.floor(len * time.seconds / videoSlider.sliderLow.w)
-                mp.commandv('seek', seconds, 'absolute')
+        -- vol_drag
+        if vol.volsliderBar.x > 0 and state.vol_open and action == 'mbtn_left_down' and
+            hit(x, y, vol.volsliderBar.x, vol.volsliderBar.y, vol.volsliderBar.x + vol.volsliderBar.w,
+                vol.volsliderBar.y + vol.volsliderBar.h) then
+            vol.volsliderBar.drag = true
+        end
+
+        if vol.volsliderBar.drag and action == 'mouse_move' then
+            local len = mouse_pos.x - math.floor(state.osd_h / 720 * vol.volslider.x)
+            len = math.floor(len * 720 / state.osd_h)
+            if len > 200 then len = 200 end
+            if len < 0 then len = 0 end
+            state.volume = math.floor(len / 2)
+            vol.volsliderBar.x = vol.volslider.x + len - vol.volsliderBar.w / 2
+            Element:panel(true, vol.volsliderBar, state)
+            vol.volsliderTxt.icon = state.volume
+            -- vol.volsliderTxt.x = vol.volsliderTxt.x + ( 42 - Element:bounds(state.volume, state.size)) / 2
+            Element:button(true, vol.volsliderTxt, state)
+        end
+
+        if vol.volsliderBar.drag and action == 'mbtn_left_up' then
+            vol.volsliderBar.drag = false
+            mp.commandv('set', 'volume', state.volume)
+        end
+
+        -- video-drag
+        if videoSlider.sliderBar.x > 0 and action == 'mbtn_left_down' and
+            hit(x, y, videoSlider.sliderBar.x, videoSlider.sliderBar.y, videoSlider.sliderBar.x + videoSlider.sliderBar.w
+                , videoSlider.sliderBar.y + videoSlider.sliderBar.h) then
+            -- mp.set_property_native('pause', true)
+            videoSlider.sliderBar.drag = true
+        end
+
+        if videoSlider.sliderBar.drag and action == 'mouse_move' then
+            local len    = mouse_pos.x - math.floor(state.osd_h / 720 * videoSlider.sliderLow.x)
+            len          = math.floor(len * 720 / state.osd_h)
+            local maxLen = videoSlider.sliderLow.w
+            if len > maxLen then len = maxLen end
+            if len < 0 then len = 0 end
+            local seconds = len * time.seconds / maxLen
+
+            -- time.timer = mp.add_timeout(0.05, function() mp.commandv('seek', seconds, 'absolute+exact') end)
+            time.cSeconds = seconds
+            videoSlider.sliderUp.w = len
+            videoSlider.sliderBar.x = videoSlider.sliderLow.x + len - state.silderH
+            Element:panel(true, videoSlider.sliderUp, state)
+            Element:panel(true, videoSlider.sliderBar, state)
+            local _, icon = timeFormat(seconds)
+            if seconds < 3600 and time.seconds > 3600 then
+                icon = '00:' .. icon
             end
+            videoSlider.startFile.icon = '' .. icon
+            Element:button(true, videoSlider.startFile, state)
+
         end
 
-        -- vol-panel-icon
-        if vol.volicon.x > 0 and state.vol_open and
-            hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * vol.volicon.x),
-                math.floor(state.osd_h / 720 * vol.volicon.y),
-                math.floor(state.osd_h / 720 * vol.volicon.x1), math.floor(state.osd_h / 720 * vol.volicon.y1)) then
-            mp.commandv('cycle', 'mute')
+        if videoSlider.sliderBar.drag and action == 'mbtn_left_up' then
+            mp.commandv('seek', time.cSeconds, 'absolute')
+            videoSlider.sliderBar.drag = false
+            -- mp.set_property_native('pause', false)
+            -- time.timer:kill()
         end
-    end
-
-
-    -- vol_drag
-    if vol.volsliderBar.x > 0 and state.vol_open and action == 'mbtn_left_down' and
-        hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * vol.volsliderBar.x),
-            math.floor(state.osd_h / 720 * vol.volsliderBar.y),
-            math.floor(state.osd_h / 720 * (vol.volsliderBar.x + vol.volsliderBar.w)),
-            math.floor(state.osd_h / 720 * (vol.volsliderBar.y + vol.volsliderBar.h))) then
-        vol.volsliderBar.drag = true
-    end
-
-    if vol.volsliderBar.drag and action == 'mouse_move' then
-        local len = mouse_pos.x - math.floor(state.osd_h / 720 * vol.volslider.x)
-        len = math.floor(len * 720 / state.osd_h)
-        if len > 200 then len = 200 end
-        if len < 0 then len = 0 end
-        state.volume = math.floor(len / 2)
-        vol.volsliderBar.x = vol.volslider.x + len - vol.volsliderBar.w / 2
-        Element:panel(true, vol.volsliderBar, state)
-        vol.volsliderTxt.icon = state.volume
-        -- vol.volsliderTxt.x = vol.volsliderTxt.x + ( 42 - Element:bounds(state.volume, state.size)) / 2
-        Element:button(true, vol.volsliderTxt, state)
-    end
-
-    if vol.volsliderBar.drag and action == 'mbtn_left_up' then
-        vol.volsliderBar.drag = false
-        mp.commandv('set', 'volume', state.volume)
-    end
-
-    -- video-drag
-    if videoSlider.sliderBar.x > 0 and action == 'mbtn_left_down' and
-        hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * videoSlider.sliderBar.x),
-            math.floor(state.osd_h / 720 * videoSlider.sliderBar.y),
-            math.floor(state.osd_h / 720 * (videoSlider.sliderBar.x + videoSlider.sliderBar.w)),
-            math.floor(state.osd_h / 720 * (videoSlider.sliderBar.y + videoSlider.sliderBar.h))) then
-        -- mp.set_property_native('pause', true)
-        videoSlider.sliderBar.drag = true
-    end
-
-    if videoSlider.sliderBar.drag and action == 'mouse_move' then
-        local len    = mouse_pos.x - math.floor(state.osd_h / 720 * videoSlider.sliderLow.x)
-        len          = math.floor(len * 720 / state.osd_h)
-        local maxLen = videoSlider.sliderLow.w
-        if len > maxLen then len = maxLen end
-        if len < 0 then len = 0 end
-        local seconds = len * time.seconds / maxLen
-
-        -- time.timer = mp.add_timeout(0.05, function() mp.commandv('seek', seconds, 'absolute+exact') end)
-        time.cSeconds = seconds
-        videoSlider.sliderUp.w = len
-        videoSlider.sliderBar.x = videoSlider.sliderLow.x + len - state.silderH
-        Element:panel(true, videoSlider.sliderUp, state)
-        Element:panel(true, videoSlider.sliderBar, state)
-        local _, icon = timeFormat(seconds)
-        if seconds < 3600 and time.seconds > 3600 then
-            icon = '00:' .. icon
-        end
-        videoSlider.startFile.icon = '' .. icon
-        Element:button(true, videoSlider.startFile, state)
 
     end
-
-    if videoSlider.sliderBar.drag and action == 'mbtn_left_up' then
-        mp.commandv('seek', time.cSeconds, 'absolute')
-        videoSlider.sliderBar.drag = false
-        -- mp.set_property_native('pause', false)
-        -- time.timer:kill()
-    end
-
 end
 
 function hover(mouseX, mouseY)
-    local bound = math.floor(state.osd_h / 720 * state.size)
-    local flag = false
-    local hover_button
     if state.keep then
+        local flag = false
+        local hover_button
+        local x = math.floor(mouseX * 720 / state.osd_h)
+        local y = math.floor(mouseY * 720 / state.osd_h)
+        -- main buttons
         for n, v in pairs(buttons) do
-            local x, y = math.floor(state.osd_h / 720 * v.x), math.floor(state.osd_h / 720 * v.y)
-            if hit(mouseX, mouseY, x, y, x + bound, y + bound) then
+            if hit(x, y, v.x, v.y, v.x + state.size, v.y + state.size) then
                 flag = true
                 hover_button = buttons[n]
             end
         end
+
         local data = subs_audios[state.ccOrAudio]
         if state.ccOeAudio_open and data.count >= 1 and data.data[1] and data.data[1].x then
             for n, v in pairs(data.data) do
-                local x, y, w, h = math.floor(state.osd_h / 720 * v.x), math.floor(state.osd_h / 720 * v.y),
-                    math.floor(state.osd_h / 720 * v.w),
-                    math.floor(state.osd_h / 720 * v.h)
-                if not v.selected and hit(mouseX, mouseY, x, y, x + w, y + h) then
+                if not v.selected and hit(x, y, v.x, v.y, v.x + v.w, v.y + v.h) then
                     flag = true
                     hover_button = data.data[n]
                 end
@@ -517,20 +501,15 @@ function hover(mouseX, mouseY)
 
         -- vol_panel_icon
         if vol.volicon.x > 0 and state.vol_open and
-            hit(mouseX, mouseY, math.floor(state.osd_h / 720 * vol.volicon.x),
-                math.floor(state.osd_h / 720 * vol.volicon.y)
-                ,
-                math.floor(state.osd_h / 720 * vol.volicon.x1), math.floor(state.osd_h / 720 * vol.volicon.y1)) then
+            hit(x, y, vol.volicon.x, vol.volicon.y, vol.volicon.x1, vol.volicon.y1) then
             flag = true
             hover_button = vol.volicon
         end
         Element:hover(flag, hover_button, state)
 
         -- sliderLow -- thumbfast
-        if hit(mouseX, mouseY, math.floor(state.osd_h / 720 * videoSlider.sliderLow.x),
-            math.floor(state.osd_h / 720 * videoSlider.sliderLow.y),
-            math.floor(state.osd_h / 720 * (videoSlider.sliderLow.x + videoSlider.sliderLow.w)),
-            math.floor(state.osd_h / 720 * (videoSlider.sliderLow.y + videoSlider.sliderLow.h))) then
+        if hit(x, y, videoSlider.sliderLow.x, videoSlider.sliderLow.y, videoSlider.sliderLow.x + videoSlider.sliderLow.w,
+            videoSlider.sliderLow.y + videoSlider.sliderLow.h) then
             -- videoSlider.sliderBar.drag = true
             if not thumbfast.disabled then
                 local len = mouseX - math.floor(state.osd_h / 720 * videoSlider.sliderLow.x)
@@ -565,17 +544,7 @@ function hover(mouseX, mouseY)
                 -- Element:button(false, { id = 42 }, state)
             end
         end
-
-
-
-        -- if not state.keep then
-        -- if thumbfast.available then
-        --     mp.commandv("script-message-to", "thumbfast", "clear")
-        -- end
-        -- end
-
     end
-
 
 end
 
@@ -842,7 +811,7 @@ mp.observe_property("pause", "bool", function(_, val)
     if state.enable then
         mp.add_timeout(0.05, function() Element:button(true, buttons.play, state) end)
     end
-    
+
 end)
 
 mp.observe_property('track-list', 'native', function(name, value)
@@ -900,15 +869,15 @@ end)
 mp.observe_property("volume", 'number', function(_, val)
     state.volume = val
     -- if state.vol_open then
-        Element:panel(true, vol.volsliderBar, state, not state.vol_open)
-        vol.volsliderTxt.icon = state.volume
-        Element:button(true, vol.volsliderTxt, state, not state.vol_open)
-        vol.volicon.icon = vol_icon()
-        Element:button(true, vol.volicon, state, not state.vol_open)
-        buttons.volume.icon = vol_icon()
-        Element:button(true, buttons.volume, state, not state.vol_open)
-        vol.volsliderBar.x = vol.volslider.x + val * 2 - vol.volsliderBar.w / 2
-        Element:panel(true, vol.volsliderBar, state, not state.vol_open)
+    Element:panel(true, vol.volsliderBar, state, not state.vol_open)
+    vol.volsliderTxt.icon = state.volume
+    Element:button(true, vol.volsliderTxt, state, not state.vol_open)
+    vol.volicon.icon = vol_icon()
+    Element:button(true, vol.volicon, state, not state.vol_open)
+    buttons.volume.icon = vol_icon()
+    Element:button(true, buttons.volume, state, not state.vol_open)
+    vol.volsliderBar.x = vol.volslider.x + val * 2 - vol.volsliderBar.w / 2
+    Element:panel(true, vol.volsliderBar, state, not state.vol_open)
     -- end
 end)
 
@@ -956,6 +925,11 @@ function cache_render()
                     end
                     num = num + 1
                 end
+                -- if cache_state["underrun"] then
+
+                -- print(1111)
+
+                -- end
                 if num > state.streamNum then
                     state.streamNum = num
                 end
