@@ -20,6 +20,7 @@ local state = {
     osd = mp.create_osd_overlay("ass-events"),
     panel_x = 0,
     panel_y = 0,
+    panel_w = 0,
     panel_h = 42,
     silderH = 4,
     marginX = 12,
@@ -270,10 +271,10 @@ function extra_panel_render(type, data)
     local space = 2
     local h = data.count * state.font_size + (data.count - 1) * space + 2 * state.marginX
 
-    state.extra_panel.x1 = math.ceil(state.osd_h / 720 * ((info.x + info.h / 2) - width / 2))
-    state.extra_panel.y1 = math.ceil(state.osd_h / 720 * (state.panel_y - h))
-    state.extra_panel.x2 = math.ceil(state.osd_h / 720 * ((info.x + info.h / 2) + width / 2))
-    state.extra_panel.y2 = math.ceil(state.osd_h / 720 * state.panel_y)
+    state.extra_panel.x1 = (info.x + info.h / 2) - width / 2
+    state.extra_panel.y1 = state.panel_y - h
+    state.extra_panel.x2 = (info.x + info.h / 2) + width / 2
+    state.extra_panel.y2 = state.panel_y
 
     Element:panel(true, {
         id = 10,
@@ -508,7 +509,8 @@ function hover(mouseX, mouseY)
         Element:hover(flag, hover_button, state)
 
         -- sliderLow -- thumbfast
-        if hit(x, y, videoSlider.sliderLow.x, videoSlider.sliderLow.y, videoSlider.sliderLow.x + videoSlider.sliderLow.w,
+        if hit(x, y, videoSlider.sliderLow.x, videoSlider.sliderLow.y, videoSlider.sliderLow.x + videoSlider.sliderLow.w
+            ,
             videoSlider.sliderLow.y + videoSlider.sliderLow.h) then
             -- videoSlider.sliderBar.drag = true
             if not thumbfast.disabled then
@@ -615,6 +617,7 @@ function render()
 
         state.panel_x = panel_x
         state.panel_y = panel_y
+        state.panel_w = panel_w
 
         --  button
         for n, _ in pairs(buttons) do
@@ -689,16 +692,18 @@ function render()
     else
         --auto hide
         local mouse_pos = mp.get_property_native('mouse-pos')
+        local x = mouse_pos.x * 720 / state.osd_h
+        local y = mouse_pos.y * 720 / state.osd_h
+
         local x1, y1 = math.floor(state.osd_w * 0.2), math.floor(state.osd_h * 0.8)
         local x2, y2 = x1 + math.floor(state.osd_w * 0.6), y1 + math.floor(state.osd_h / 720 * state.panel_h)
-        state.keep = hit(mouse_pos.x, mouse_pos.y, x1, y1, x2, y2) or
+        state.keep = hit(x, y, state.panel_x, state.panel_y, state.panel_x + state.panel_w, state.panel_y + state.panel_h)
+            or
             (
             state.ccOeAudio_open and
-                hit(mouse_pos.x, mouse_pos.y, state.extra_panel.x1, state.extra_panel.y1, state.extra_panel.x2,
-                    state.extra_panel.y2)) or
-            (state.vol_open and hit(mouse_pos.x, mouse_pos.y, math.floor(state.osd_h / 720 * vol.volpanel.x),
-                math.floor(state.osd_h / 720 * vol.volpanel.y), math.floor(state.osd_h / 720 * vol.volpanel.x1),
-                math.floor(state.osd_h / 720 * vol.volpanel.y1)))
+                hit(x, y, state.extra_panel.x1, state.extra_panel.y1, state.extra_panel.x2, state.extra_panel.y2))
+            or
+            (state.vol_open and hit(x, y, vol.volpanel.x, vol.volpanel.y, vol.volpanel.x1, vol.volpanel.y1))
 
         if state.keep then
             state.timer:kill()
