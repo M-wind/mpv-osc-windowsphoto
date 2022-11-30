@@ -133,9 +133,10 @@ local subs_audios = {
             id = 'load',
             selected = false,
             title = '选择字幕文件...',
+            lang = '',
             text = '',
             len = Element:bounds('选择字幕文件...', state.font_size),
-            -- title_len = 0,
+            lang_len = 0,
             text_len = 0
         }
     } },
@@ -260,10 +261,10 @@ function extra_panel_render(type, data)
     state.ccOrAudio = type
 
     local len = data.data[1].len
+    local text_len = data.data[1].text_len
     for _, v1 in pairs(data.data) do
-        if v1.len > len then
-            len = v1.len
-        end
+        if v1.len > len then len = v1.len end
+        if v1.text_len > text_len then text_len = v1.text_len end
     end
 
     local width = len + 2 * state.marginX
@@ -277,7 +278,7 @@ function extra_panel_render(type, data)
     state.extra_panel.y2 = state.panel_y
 
     Element:panel(true, {
-        id = 10,
+        id = 9,
         hover_style = state.panel_style,
         x = (info.x + info.h / 2) - width / 2,
         y = state.panel_y - h,
@@ -289,11 +290,11 @@ function extra_panel_render(type, data)
     for i = 1, data.count do
         if data.data[i].selected then
             Element:panel(true, {
-                id = 11,
+                id = 10,
                 hover_style = state.hover_style,
                 x = (info.x + info.h / 2) - width / 2 + state.marginX,
                 y = state.panel_y - h + state.marginX + (state.font_size + space) * (i - 1),
-                w = width - 2 * state.marginX,
+                w = len,
                 h = state.font_size,
                 z = 200,
             }, state)
@@ -304,15 +305,22 @@ function extra_panel_render(type, data)
         data.data[i]['h'] = state.font_size
         data.data[i]['hover_style'] = state.hover_style
         Element:button(true, {
-            id = 20 + i,
+            id = 10 + i,
             x = (info.x + info.h / 2) - width / 2 + state.marginX,
             y = state.panel_y - h + state.marginX + (state.font_size + space) * (i - 1),
             h = state.font_size,
             icon = data.data[i].title
         }, state)
         Element:button(true, {
+            id = 20 + i,
+            x = (info.x + info.h / 2) - width / 2 + state.marginX + len - data.data[i].lang_len - text_len,
+            y = state.panel_y - h + state.marginX + (state.font_size + space) * (i - 1),
+            h = state.font_size,
+            icon = data.data[i].lang
+        }, state)
+        Element:button(true, {
             id = 30 + i,
-            x = (info.x + info.h / 2) - width / 2 + state.marginX + width - 2 * state.marginX - data.data[i].text_len,
+            x = (info.x + info.h / 2) - width / 2 + state.marginX + len - data.data[i].text_len,
             y = state.panel_y - h + state.marginX + (state.font_size + space) * (i - 1),
             h = state.font_size,
             icon = data.data[i].text
@@ -582,13 +590,14 @@ function exetral_panel_hide()
     -- --hover
     Element:hover(false, { id = 61 }, state)
     -- extra_panel
-    Element:panel(false, { id = 10 }, state)
+    Element:panel(false, { id = 9 }, state)
     -- extra_panel_seleted
-    Element:panel(false, { id = 11 }, state)
+    Element:panel(false, { id = 10 }, state)
     -- extra_panel_text
     local data = subs_audios[state.ccOrAudio]
     if data.count >= 1 then
         for i = 1, data.count do
+            Element:panel(false, { id = 10 + i }, state)
             Element:panel(false, { id = 20 + i }, state)
             Element:panel(false, { id = 30 + i }, state)
         end
@@ -826,36 +835,40 @@ mp.observe_property('track-list', 'native', function(name, value)
     for _, track in pairs(value) do
         if track.type == 'sub' then
             types[track.type] = types[track.type] + 1
-            local title = track.title and track.title or ''
+            local title = track.title and track.title or 'Text'
             local lang = track.lang and track.lang or ''
-            title = title == '' and lang or title
             local text = track.codec
-            local len = title == '' and 0 or Element:bounds(title .. ',,', state.font_size)
+            local title_len = Element:bounds(title .. ',,', state.font_size)
+            local lang_len = lang == '' and 0 or Element:bounds(lang .. ',,', state.font_size)
             local text_len = Element:bounds(text, state.font_size)
             subs_audios['sub'].data[track['id'] + 1] = {
                 id = track['id'],
                 selected = track.selected,
-                title = title .. '   ',
+                title = title,
+                lang = lang,
                 text = text,
-                len = len + text_len,
+                len = title_len + lang_len + text_len,
+                lang_len = lang_len,
                 text_len = text_len,
             }
         elseif track.type == 'audio' then
             types[track.type] = types[track.type] + 1
             local ch = track['audio-channels'] .. 'Ch'
             local rate = track['demux-samplerate'] / 1000 .. 'KHz'
-            local title = track.title and track.title or ''
+            local title = track.title and track.lang or ''
             local lang = track.lang and track.lang or ''
-            title = title == '' and lang or title
             local text = track.codec .. ', ' .. ch .. ', ' .. rate
-            local len = title == '' and 0 or Element:bounds(title .. ',,', state.font_size)
+            local title_len = title == '' and 0 or Element:bounds(title .. ',,', state.font_size)
+            local lang_len = lang == '' and 0 or Element:bounds(lang .. ',,', state.font_size)
             local text_len = Element:bounds(text, state.font_size)
             subs_audios['audio'].data[track['id']] = {
                 id = track['id'],
                 selected = track.selected,
-                title = title .. '   ',
+                title = title,
+                lang = lang,
                 text = text,
-                len = len + text_len,
+                len = title_len + lang_len + text_len,
+                lang_len = lang_len,
                 text_len = text_len,
             }
         end
