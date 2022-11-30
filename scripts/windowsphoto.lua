@@ -127,21 +127,7 @@ local icons = {
     -- quti = '\xee\x98\xad',
 }
 
-local subs_audios = {
-    sub = { count = 1, data = {
-        [1] = {
-            id = 'load',
-            selected = false,
-            title = '选择字幕文件...',
-            lang = '',
-            text = '',
-            len = Element:bounds('选择字幕文件...', state.font_size),
-            lang_len = 0,
-            text_len = 0
-        }
-    } },
-    audio = { count = 0, data = {} }
-}
+local subs_audios = {}
 
 -- local subs = { count = 0, data = {} }
 -- local audios = { count = 0, data = {} }
@@ -261,6 +247,8 @@ function extra_panel_render(type, data)
     state.ccOrAudio = type
 
     local len = data.data[1].len
+    print('==1', len)
+
     local text_len = data.data[1].text_len
     for _, v1 in pairs(data.data) do
         if v1.len > len then len = v1.len end
@@ -268,6 +256,7 @@ function extra_panel_render(type, data)
     end
 
     local width = len + 2 * state.marginX
+    print('==2', len)
 
     local space = 2
     local h = data.count * state.font_size + (data.count - 1) * space + 2 * state.marginX
@@ -505,7 +494,7 @@ function hover(mouseX, mouseY)
         local data = subs_audios[state.ccOrAudio]
         if state.ccOeAudio_open and data.count >= 1 and data.data[1] and data.data[1].x then
             for n, v in pairs(data.data) do
-                if not v.selected and hit(x, y, v.x, v.y, v.x + v.w, v.y + v.h) then
+                if not v.selected and v.x and hit(x, y, v.x, v.y, v.x + v.w, v.y + v.h) then
                     flag = true
                     hover_button = data.data[n]
                 end
@@ -832,6 +821,21 @@ end)
 
 mp.observe_property('track-list', 'native', function(name, value)
     local types = { sub = 0, audio = 0 }
+    subs_audios = {
+        sub = { count = 1, data = {
+            [1] = {
+                id = 'load',
+                selected = false,
+                title = '选择字幕文件...',
+                lang = '',
+                text = '',
+                len = Element:bounds('选择字幕文件...', state.font_size),
+                lang_len = 0,
+                text_len = 0
+            }
+        } },
+        audio = { count = 0, data = {} }
+    }
     for _, track in pairs(value) do
         if track.type == 'sub' then
             types[track.type] = types[track.type] + 1
