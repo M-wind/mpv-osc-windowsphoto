@@ -95,13 +95,12 @@ local function init()
     local startTime = Element.new(volume.info.x + volume.info.w + Margin, ty, length, FontSize2, Style.text, startT)
     local endTime = Element.new(quit.info.x - Margin - length, ty, length, FontSize2, Style.text, endT)
     local ssx = startTime.info.x + length + Margin
-    local ssw = endTime.info.x - ssx - Margin - 5
     local by = main.info.y + (main.info.h - SliderH) / 2 + 1
-    local videoLow = Element.new(ssx, by, ssw, SliderH, Style.low, '', SliderR)
+    local videoLow = Element.new(ssx, by, endTime.info.x - ssx - Margin - 5, SliderH, Style.low, '', SliderR)
     local distance = time.duration == 0 and 0 or math.floor(time.seconds * videoLow.info.w / time.duration)
     local videoUp = Element.new(ssx, by, distance, SliderH, Style.up, '', SliderR)
-    local videoBar = Element.new(ssx - BarW / 2 + distance, by - (BarH - videoLow.info.h) / 2, BarW, BarH, Style.up,
-        '', BarR)
+    local videoBar = Element.new(ssx - BarW / 2 + distance, by - (BarH - videoLow.info.h) / 2, BarW, BarH, Style.up, '',
+        BarR)
     Elements = {}
     Elements['main'] = { id = 1, type = 'panel', ele = main }
     Elements['play'] = { id = 2, type = 'button', ele = play, click = true }
@@ -555,8 +554,7 @@ mp.observe_property("playback-time", "number", function(_, val)
     Elements['startTime'].ele.info.text = text
     local length                        = math.floor(val * Elements['videoLow'].ele.info.w / time.duration)
     Elements['videoUp'].ele.info.w      = length
-    Elements['videoBar'].ele.info.x     = Elements['videoLow'].ele.info.x + length -
-        Elements['videoBar'].ele.info.w / 2
+    Elements['videoBar'].ele.info.x     = Elements['videoLow'].ele.info.x + length - Elements['videoBar'].ele.info.w / 2
     if state.enable then mainRender() end
 end)
 
@@ -594,12 +592,11 @@ mp.observe_property('volume', 'native', function(_, val)
 end)
 
 mp.observe_property("mute", 'bool', function(_, _)
-    if open.volume then
-        EleVol['volIcon'].ele.info.text = VolIcon(state.volume)
-        Elements['volume'].ele.info.text = VolIcon(state.volume)
-        volumeRender()
-        mainRender()
-    end
+    if Elements['volume'] == nil then return end
+    Elements['volume'].ele.info.text = VolIcon(state.volume)
+    if EleVol['volIcon'] ~= nil then EleVol['volIcon'].ele.info.text = VolIcon(state.volume) end
+    if open.volume then volumeRender() end
+    if state.enable then mainRender() end
 end)
 
 local function sub_pure(track)
@@ -681,3 +678,26 @@ mp.register_script_message("thumbfast-info", function(json)
         thumbfast = data
     end
 end)
+
+-- local assdraw = require 'mp.assdraw'
+-- local ass = assdraw.ass_new()
+-- local i = 3
+-- mp.add_periodic_timer(0.5, function()
+--     -- local style = '{\\pos(100, 100)\\bord0\\fnmpv-icon\\fs56\\frz' .. i .. '\\a10}' .. Icons.spinner
+
+--     ass.text = ''
+--     for j = 1, 4 do
+--         ass:new_event()
+--         ass:pos(100 + j * 50, 100)
+--         ass:append(j == i and Style.cache or Style.low)
+--         ass:draw_start()
+--         ass:round_rect_cw(0, 0, 30, 30, 30 / 2)
+--         ass:draw_stop()
+--     end
+--     i = i + 1
+--     if  i > 4 then i = 1 end
+
+--     osd.id = 100
+--     osd.data = ass.text
+--     osd:update()
+-- end)
