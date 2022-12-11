@@ -25,6 +25,7 @@ local thumbfast = {
     disabled = true,
     available = false
 }
+local press = { vol = false, video = false }
 local function render(tId, data)
     local text = ''
     local a = SortById(data)
@@ -112,7 +113,7 @@ local function init()
     Elements['endTime'] = { id = 8, type = 'text', ele = endTime }
     Elements['quit'] = { id = 9, type = 'button', ele = quit, click = true }
     Elements['videoUp'] = { id = 10, type = 'panel', ele = videoUp }
-    Elements['videoBar'] = { id = 20, type = 'panel', ele = videoBar, press = false }
+    Elements['videoBar'] = { id = 20, type = 'panel', ele = videoBar }
 end
 
 local function hover()
@@ -239,7 +240,7 @@ local function volumeInit()
     EleVol['volIcon'] = { id = 2, type = 'button', ele = icon, click = true }
     EleVol['volLow'] = { id = 3, type = 'panel', ele = low, click = true }
     EleVol['volUp'] = { id = 4, type = 'panel', ele = up }
-    EleVol['volBar'] = { id = 5, type = 'panel', ele = bar, press = false }
+    EleVol['volBar'] = { id = 5, type = 'panel', ele = bar }
     EleVol['volText'] = { id = 6, type = 'text', ele = text }
 end
 
@@ -426,7 +427,7 @@ local function click(action)
     local mouse_pos = mp.get_property_native('mouse-pos')
     local x = math.floor(mouse_pos.x * 720 / H)
     local y = math.floor(mouse_pos.y * 720 / H)
-    if action == 'mbtn_left_up' and not Elements['videoBar'].press then
+    if action == 'mbtn_left_up' and not press.vol and not press.video then
         for k, v in pairs(Elements) do
             if v.click and v.ele.mouseIn(x, y) then button_click(k, x, y) return end
         end
@@ -456,14 +457,14 @@ local function click(action)
     end
     if action == 'mbtn_left_down' then
         if open.volume and EleVol['volBar'].ele.mouseIn(x, y) then
-            EleVol['volBar'].press = true
+            press.vol = true
         end
         if time.duration ~= 0 and Elements['videoBar'].ele.mouseIn(x, y) then
-            Elements['videoBar'].press = true
+            press.video = true
         end
     end
 
-    if EleVol['volBar'] ~= nil and EleVol['volBar'].press and action == 'mouse_move' then
+    if press.vol and action == 'mouse_move' then
         local len = x - EleVol['volLow'].ele.info.x
         if len < 0 then len = 0 end
         if len > EleVol['volLow'].ele.info.w then len = EleVol['volLow'].ele.info.w end
@@ -471,12 +472,12 @@ local function click(action)
         mp.commandv('set', 'volume', vol)
     end
 
-    if EleVol['volBar'] ~= nil and EleVol['volBar'].press and action == 'mbtn_left_up' then
-        EleVol['volBar'].press = false
+    if press.vol and action == 'mbtn_left_up' then
+        press.vol = false
         return
     end
 
-    if Elements['videoBar'].press and action == 'mouse_move' then
+    if press.video and action == 'mouse_move' then
         local length = x - Elements['videoLow'].ele.info.x
         local seconds = math.floor(length * time.duration / Elements['videoLow'].ele.info.w)
         if length < 0 then seconds = 0
@@ -497,8 +498,8 @@ local function click(action)
         mainRender()
     end
 
-    if Elements['videoBar'].press and action == 'mbtn_left_up' then
-        Elements['videoBar'].press = false
+    if press.video and action == 'mbtn_left_up' then
+        press.video = false
         mp.commandv('seek', time.seconds, 'absolute+exact')
         return
     end
