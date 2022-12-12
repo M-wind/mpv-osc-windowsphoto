@@ -16,6 +16,7 @@ local state = {
     timer,
     play = false,
     enable = true,
+    keyBind = false,
 }
 local time = { seconds = 0, duration = 0, len1 = Bounds('00:00', FontSize2), len2 = Bounds('00:00:00', FontSize2) }
 local open = { keep = false, mainPanel = true, sub = false, audio = false, volume = false }
@@ -26,6 +27,14 @@ local thumbfast = {
     available = false
 }
 local press = { vol = false, video = false }
+
+local function trueRender(tId, z, text)
+    osd.id = tId
+    osd.data = text
+    osd.z = z
+    osd:update()
+end
+
 local function render(tId, data)
     local text = ''
     local a = SortById(data)
@@ -40,10 +49,7 @@ local function render(tId, data)
             end
         end
     end
-    osd.id = tId
-    osd.data = text
-    osd.z = 1000
-    osd:update()
+    trueRender(tId, 1000, text)
 end
 
 local function mainRender()
@@ -51,10 +57,7 @@ local function mainRender()
 end
 
 local function hoverRender(ele, style)
-    osd.id = id.hover
-    osd.data = ele.panel({ style = style, raduis = PanelR })
-    osd.z = 1001
-    osd:update()
+    trueRender(id.hover, 1001, ele.panel({ style = style, raduis = PanelR }))
 end
 
 local function remove(id)
@@ -64,8 +67,12 @@ end
 
 local function do_enable_keybindings()
     if open.keep then
+        if not state.keyBind then return end
+        state.keyBind = false
         mp.enable_key_bindings("input")
     else
+        if state.keyBind then return end
+        state.keyBind = true
         mp.disable_key_bindings("input")
         mp.enable_key_bindings("mouse", "allow-vo-dragging+allow-hide-cursor")
     end
@@ -164,10 +171,15 @@ local function hover()
                 -- y
                 y
             )
+            local t = TimeFormat(seconds)
+            local text = Element.new(x - Bounds(t, FontSize2) / 2, Elements['main'].ele.info.y, FontSize2, FontSize2,
+                Style.text, t).txt()
+            trueRender(100, 1001, text)
         end
     else
         if thumbfast.available then
             mp.commandv("script-message-to", "thumbfast", "clear")
+            remove(100)
         end
     end
 end
@@ -488,13 +500,17 @@ mp.set_key_bindings({
     { "mbtn_left", function(e) dispatch("mbtn_left", "up") end, function(e) dispatch("mbtn_left", "down") end },
     { "mbtn_left_dbl", 'ignore' },
 }, "input", "force")
-mp.enable_key_bindings("input")
 
 mp.observe_property('osd-dimensions', 'native', function(_, val)
     if val.w == 0 then return end
     W, H = val.w, val.h
     init()
     if state.enable then autoRender() end
+    if thumbfast.available then
+        mp.commandv("script-message-to", "thumbfast", "clear")
+        remove(100)
+    end
+    -- mp.disable_key_bindings("mouse")
 end)
 
 mp.observe_property("duration", "number", function(_, val)
@@ -504,7 +520,7 @@ mp.observe_property("duration", "number", function(_, val)
     local e = TimeFormat(val)
     if #e1 ~= #e then init() end
     Elements['endTime'].ele.info.text = e
-    if state.enable then mainRender() end
+    if state.enable and not press.video then mainRender() end
 end)
 
 mp.observe_property("playback-time", "number", function(_, val)
@@ -527,23 +543,28 @@ mp.observe_property("pause", "bool", function(_, val)
 end)
 
 mp.observe_property('volume-max', 'native', function(_, val)
-    state.volumeMax = val
-    state.volumeTextLen = math.floor(Bounds('' .. val, FontSize))
+    state.volumeMax = math.floor(val)
+    state.volumeTextLen = math.floor(Bounds(state.volumeMax, FontSize))
+    if open.volume then
+        EleVol = {}
+        volumeInit()
+        volumeRender()
+    end
 end)
 
 mp.observe_property('volume', 'native', function(_, val)
-    state.volume = val
-    if Elements['volume'] == nil then return end
-    Elements['volume'].ele.info.text = VolIcon(val)
+    state.volume = math.floor(val)
+    if Elements['volume'] == nil or state.volume > state.volumeMax  then return end
+    Elements['volume'].ele.info.text = VolIcon(state.volume)
     if EleVol['volMain'] ~= nil then
-        local len = math.floor(val * EleVol['volLow'].ele.info.w / state.volumeMax)
-        EleVol['volIcon'].ele.info.text = VolIcon(val)
+        local len = math.floor(state.volume * EleVol['volLow'].ele.info.w / state.volumeMax)
+        EleVol['volIcon'].ele.info.text = VolIcon(state.volume)
         EleVol['volUp'].ele.info.w = len
         EleVol['volBar'].ele.info.x = EleVol['volLow'].ele.info.x + len - EleVol['volBar'].ele.info.w / 2
         local a_x = EleVol['volLow'].ele.info.x + EleVol['volLow'].ele.info.w + Margin
-        local len = Bounds('' .. val, FontSize)
+        local len = Bounds('' .. state.volume, FontSize)
         EleVol['volText'].ele.info.x = a_x + (state.volumeTextLen - len) / 2
-        EleVol['volText'].ele.info.text = val
+        EleVol['volText'].ele.info.text = state.volume
     end
     if state.enable then
         volumeRender()
@@ -639,6 +660,7 @@ mp.register_script_message("thumbfast-info", function(json)
         thumbfast = data
     end
 end)
+
 
 -- local assdraw = require 'mp.assdraw'
 -- local ass = assdraw.ass_new()
