@@ -84,13 +84,13 @@ local function init()
     local volume = Element.new(sub.info.x + sub.info.w + Margin, Y, FontSize, FontSize, Style.text, VolIcon(state.volume))
     local quit = Element.new(main.info.x + main.info.w - FontSize - Margin, Y, FontSize, FontSize, Style.text, Icons.quit)
     local length = time.duration < 3600 and time.len1 or time.len2
-    local ty = main.info.y + (main.info.h - FontSize2) / 2 + 1.5
+    local ty = main.info.y + (main.info.h - FontSize2) / 2
     local startT, endT = TimeFormat(time.seconds), TimeFormat(time.duration)
     if time.seconds < 3600 and time.duration > 3600 then startT = '00:' .. startT end
     local startTime = Element.new(volume.info.x + volume.info.w + Margin, ty, length, FontSize2, Style.text, startT)
     local endTime = Element.new(quit.info.x - Margin - length, ty, length, FontSize2, Style.text, endT)
     local ssx = startTime.info.x + length + Margin
-    local by = main.info.y + (main.info.h - SliderH) / 2 + 1
+    local by = main.info.y + (main.info.h - SliderH) / 2 + 0.5
     local videoLow = Element.new(ssx, by, endTime.info.x - ssx - Margin - 5, SliderH, Style.low, '', SliderR)
     local distance = time.duration == 0 and 0 or math.floor(time.seconds * videoLow.info.w / time.duration)
     local videoUp = Element.new(ssx, by, distance, SliderH, Style.up, '', SliderR)
@@ -219,7 +219,7 @@ local function volumeInit()
     local main = Element.new(mainX, mainY, mainW, mainH, Style.panel, '', PanelR)
     local icon = Element.new(mainX + Margin, mainY + (mainH - FontSize) / 2, FontSize, FontSize, Style.text,
         VolIcon(state.volume))
-    local low = Element.new(icon.info.x + icon.info.w + Margin, mainY + (mainH - SliderH) / 2 + 1.5, 195, SliderH,
+    local low = Element.new(icon.info.x + icon.info.w + Margin, mainY + (mainH - SliderH) / 2 + 1, 195, SliderH,
         Style.low, '', SliderR)
     local w = state.volume * low.info.w / state.volumeMax
     local up = Element.new(low.info.x, low.info.y, w, SliderH, Style.up, '', SliderR)
@@ -227,7 +227,7 @@ local function volumeInit()
         , BarR)
     local a_x = low.info.x + low.info.w + Margin
     local len = Bounds('' .. state.volume, FontSize)
-    local text = Element.new(a_x + (state.volumeTextLen - len) / 2, mainY + (mainH - FontSize) / 2 + 1, len,
+    local text = Element.new(a_x + (state.volumeTextLen - len) / 2, mainY + (mainH - FontSize) / 2, len,
         FontSize,
         Style.text, state.volume)
     EleVol['volMain'] = { id = 1, type = 'panel', ele = main }
@@ -428,6 +428,7 @@ local function click(action)
         if len > EleVol['volLow'].ele.info.w then len = EleVol['volLow'].ele.info.w end
         local vol = math.floor(len * state.volumeMax / EleVol['volLow'].ele.info.w + 0.5)
         mp.commandv('set', 'volume', vol)
+        return
     end
 
     if press.vol and action == 'mbtn_left_up' then
@@ -438,13 +439,11 @@ local function click(action)
     if press.video and action == 'mouse_move' then
         local length = x - Elements['videoLow'].ele.info.x
         local seconds = math.floor(length * time.duration / Elements['videoLow'].ele.info.w)
-        if length < 0 then seconds = 0
-            length = 0
-        end
+        -- mp.commandv('seek', seconds, 'absolute+keyframes')
+        if length < 0 then seconds = 0 length = 0 end
         if length > Elements['videoLow'].ele.info.w then seconds = time.duration
             length = Elements['videoLow'].ele.info.w
         end
-        -- mp.commandv('seek', seconds, 'absolute+keyframes')
         time.seconds = seconds
         Elements['videoUp'].ele.info.w = length
         Elements['videoBar'].ele.info.x = Elements['videoLow'].ele.info.x + length -
@@ -453,6 +452,7 @@ local function click(action)
         if seconds < 3600 and time.duration > 3600 then text = '00:' .. text end
         Elements['startTime'].ele.info.text = text
         mainRender()
+        return
     end
 
     if press.video and action == 'mbtn_left_up' then
@@ -502,14 +502,14 @@ end)
 
 mp.observe_property("playback-time", "number", function(_, val)
     if val == nil or Elements['videoBar'].press then return end
-    time.seconds = val
     local text = TimeFormat(val)
     if val < 3600 and time.duration > 3600 then text = '00:' .. text end
     Elements['startTime'].ele.info.text = text
     local length                        = math.floor(val * Elements['videoLow'].ele.info.w / time.duration)
     Elements['videoUp'].ele.info.w      = length
     Elements['videoBar'].ele.info.x     = Elements['videoLow'].ele.info.x + length - Elements['videoBar'].ele.info.w / 2
-    if state.enable then mainRender() end
+    if not press.video then time.seconds = val end
+    if state.enable and not press.video then mainRender() end
 end)
 
 mp.observe_property("pause", "bool", function(_, val)
