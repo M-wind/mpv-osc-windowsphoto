@@ -14,12 +14,11 @@ local state = {
     volumeMax = 130,
     volumeTextLen = math.floor(Bounds('130', FontSize)),
     timer,
-    play = false,
-    enable = true,
+    enable = false,
     keyBind = false,
 }
 local time = { seconds = 0, duration = 0, len1 = Bounds('00:00', FontSize2), len2 = Bounds('00:00:00', FontSize2) }
-local open = { keep = false, mainPanel = true, sub = false, audio = false, volume = false }
+local open = { keep = false, sub = false, audio = false, volume = false }
 local thumbfast = {
     width = 0,
     height = 0,
@@ -30,7 +29,7 @@ local press = { vol = false, video = false }
 
 local function trueRender(tId, z, text)
     osd.id = tId
-    osd.data = text
+    osd.data =  text
     osd.z = z
     osd:update()
 end
@@ -205,7 +204,6 @@ local function hide()
     volumeHide()
     subHide()
     audioHide()
-    open.mainPanel = true
     state.enable = false
 end
 
@@ -293,14 +291,13 @@ local function subAudioInit(x1, y1, type)
 end
 
 local function autoRender()
-    if open.mainPanel then
+    if not state.enable then
         state.enable = true
         mainRender()
         state.timer = mp.add_timeout(0, hide)
         state.timer:kill()
         state.timer.timeout = 1
         state.timer:resume()
-        open.mainPanel = false
     else
         local mouse_pos = mp.get_property_native('mouse-pos')
         local x = mouse_pos.x * 720 / H
@@ -479,7 +476,6 @@ end
 
 local function dispatch(source, what)
     local action = string.format("%s%s", source, what and ("_" .. what) or "")
-
     if action == 'mouse_move' then
         autoRender()
         if open.keep then hover() end
@@ -487,8 +483,8 @@ local function dispatch(source, what)
     if open.keep then
         click(action)
     else
-        press.video = false
-        press.vol = false
+        if press.video then press.video = false end
+        if press.vol then press.vol = false end
     end
 end
 
@@ -496,21 +492,20 @@ mp.set_key_bindings({
     { "mouse_move", function(e) dispatch("mouse_move", nil) end },
     { "mbtn_left_dbl", 'ignore' },
 }, "mouse", "force")
+
 mp.set_key_bindings({
-    { "mbtn_left", function(e) dispatch("mbtn_left", "up") end, function(e) dispatch("mbtn_left", "down") end },
+    { "mbtn_left", function(e) dispatch("mbtn_left", "up") end, function(e) dispatch("mbtn_left", "down") end, },
     { "mbtn_left_dbl", 'ignore' },
 }, "input", "force")
-
 mp.observe_property('osd-dimensions', 'native', function(_, val)
-    if val.w == 0 then return end
     W, H = val.w, val.h
     init()
-    if state.enable then autoRender() end
+    remove(id.hover)
+    if not state.enable then autoRender() else mainRender() end
     if thumbfast.available then
         mp.commandv("script-message-to", "thumbfast", "clear")
         remove(100)
     end
-    -- mp.disable_key_bindings("mouse")
 end)
 
 mp.observe_property("duration", "number", function(_, val)
@@ -554,7 +549,7 @@ end)
 
 mp.observe_property('volume', 'native', function(_, val)
     state.volume = math.floor(val)
-    if Elements['volume'] == nil or state.volume > state.volumeMax  then return end
+    if Elements['volume'] == nil or state.volume > state.volumeMax then return end
     Elements['volume'].ele.info.text = VolIcon(state.volume)
     if EleVol['volMain'] ~= nil then
         local len = math.floor(state.volume * EleVol['volLow'].ele.info.w / state.volumeMax)
