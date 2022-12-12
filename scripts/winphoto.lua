@@ -440,7 +440,9 @@ local function click(action)
         local length = x - Elements['videoLow'].ele.info.x
         local seconds = math.floor(length * time.duration / Elements['videoLow'].ele.info.w)
         -- mp.commandv('seek', seconds, 'absolute+keyframes')
-        if length < 0 then seconds = 0 length = 0 end
+        if length < 0 then seconds = 0
+            length = 0
+        end
         if length > Elements['videoLow'].ele.info.w then seconds = time.duration
             length = Elements['videoLow'].ele.info.w
         end
@@ -470,7 +472,12 @@ local function dispatch(source, what)
         autoRender()
         if open.keep then hover() end
     end
-    if open.keep then click(action) end
+    if open.keep then
+        click(action)
+    else
+        press.video = false
+        press.vol = false
+    end
 end
 
 mp.set_key_bindings({
