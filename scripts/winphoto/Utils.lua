@@ -9,56 +9,34 @@ function VolIcon(volume)
 	return icon
 end
 
-
--- function PairsByKeys(t)
---     local a = {}
--- 	for k, v in pairs(t) do
--- 		a[v.id] = k
--- 	end
--- 	local i = 0
--- 	return function()
--- 		i = i + 1
--- 		return a[i], t[a[i]]
--- 	end
--- end
-
 function SortById(t)
 	local a = {}
 	for k, v in pairs(t) do a[v.id] = k end
 	return a
 end
 
-
 local osd = mp.create_osd_overlay("ass-events")
 function Bounds(text, h)
-    local tags = '\\bord0'
-    tags = tags .. '\\fnmpv-icon'
-    tags = tags .. '\\fs' .. h
-    osd.data = '{' .. tags .. '}' .. text
-    osd.id = 63
-    osd.compute_bounds = true
-    osd.hidden = true
-    local res = osd:update()
-    osd:remove()
-    -- return res.x1 - res.x0, res.y1 - res.y0
-    return res.x1 - res.x0
+	local tags = '\\bord0'
+	tags = tags .. '\\fnmpv-icon'
+	tags = tags .. '\\fs' .. h
+	osd.data = '{' .. tags .. '}' .. text
+	osd.id = 63
+	osd.compute_bounds = true
+	osd.hidden = true
+	local res = osd:update()
+	osd:remove()
+	-- return res.x1 - res.x0, res.y1 - res.y0
+	return res.x1 - res.x0
 end
-
 
 function TimeFormat(seconds)
 	if seconds < 3600 then
-		return '00:00', os.date("%M:%S", seconds)
+		return os.date("%M:%S", seconds)
 	else
 		-- 最大长度23:59:59
-		return '00:00:00', os.date("%H:%M:%S", seconds + 3600 * 16)
+		return os.date("%H:%M:%S", seconds + 3600 * 16)
 	end
-end
-
-function Hit(x1, y1, x, y, w, h)
-	-- return x <= x1 and x1 <= x + w and y <= y1 and y1 <= y + h
-	local dx = math.max(x - x1, 0, x1 - (x + w))
-	local dy = math.max(y - y1, 0, y1 - (y + h))
-	return (dx + dy) == 0
 end
 
 local utils = require 'mp.utils'
