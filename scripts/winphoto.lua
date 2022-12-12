@@ -72,7 +72,6 @@ local function do_enable_keybindings()
 end
 
 local function init()
-    local W, H = mp.get_osd_size()
     local mainX = math.floor(W * 720 / H * 0.2)
     local mainY = math.floor(H * 720 / H * 0.8)
     local mainW = math.floor(W * 720 / H * 0.6)
@@ -243,84 +242,46 @@ local function volumeInit()
     EleVol['volText'] = { id = 6, type = 'text', ele = text }
 end
 
-local function subInit()
-    if EleSub['subMain'] ~= nil then return end
-    local x1, y1 = Elements['sub'].ele.info.x, Elements['main'].ele.info.y
-    local maxLen = sub.data[1].len
-    for _, v in pairs(sub.data) do
+local function subAudioInit(x1, y1, type)
+    if type == 'sub' and EleSub['main'] ~= nil then return end
+    if type == 'audio' and EleAudio['main'] ~= nil then return end
+    local info = {}
+    local data = type == 'sub' and sub or audio
+    local maxLen = data.data[1].len
+    for _, v in pairs(data.data) do
         if v.len > maxLen then maxLen = v.len end
     end
     local gap = 1
     local itemH = FontSize2 + Margin / 2
     local w = math.floor(maxLen) + Margin * 2
     local x = x1 - w / 2
-    local h = sub.count * itemH + Margin + (sub.count - 1) * gap
+    local h = data.count * itemH + Margin + (data.count - 1) * gap
     local y = y1 - h
     local main = Element.new(x, y, w, h, Style.panel, '', PanelR)
-    EleSub['subMain'] = { id = 1, type = 'panel', ele = main }
-    for i = 1, sub.count do
-        if sub.data[i].selected then
-            EleSub['selected'] = { id = 2, type = 'panel',
+    info['main'] = { id = 1, type = 'panel', ele = main }
+    for i = 1, data.count do
+        if data.data[i].selected then
+            info['selected'] = { id = 2, type = 'panel',
                 ele = Element.new(x + Margin / 2, y + Margin / 2 + (itemH + gap) * (i - 1), math.floor(maxLen) + Margin,
                     itemH, Style.hover, '', PanelR)
             }
         end
-        EleSub['subHover' .. (i + sub.count)] = { id = 2 + i + sub.count * 2, type = 'hover', click = true,
-            selected = sub.data[i].selected, tId = sub.data[i].id,
+        info['info' .. i] = { id = 2 + i + data.count * 2, type = 'hover', click = true,
+            selected = data.data[i].selected, tId = data.data[i].id,
             ele = Element.new(x + Margin / 2, y + Margin / 2 + (itemH + gap) * (i - 1), math.floor(maxLen) + Margin,
                 itemH, Style.hover, '', PanelR)
         }
-        EleSub['sub' .. i] = { id = 2 + i, type = 'text',
+        info['title' .. i] = { id = 2 + i, type = 'text',
             ele = Element.new(x + Margin, y + Margin + (itemH + gap) * (i - 1) - (itemH - FontSize2) / 2, FontSize2,
-                FontSize2, Style.text, sub.data[i].title)
+                FontSize2, Style.text, data.data[i].title)
         }
-        EleSub['sub' .. (i + sub.count)] = { id = 2 + i + sub.count, type = 'text',
-            ele = Element.new(x + w - Margin / 2 - sub.data[i].text_len,
+        info['text' .. i] = { id = 2 + i + data.count, type = 'text',
+            ele = Element.new(x + w - Margin / 2 - data.data[i].text_len,
                 y + Margin + (itemH + gap) * (i - 1) - (itemH - FontSize2) / 2, FontSize2,
-                FontSize2, Style.text, sub.data[i].text)
+                FontSize2, Style.text, data.data[i].text)
         }
-
     end
-end
-
-local function audioInit()
-    if EleAudio['audioMain'] ~= nil then return end
-    local x1, y1 = Elements['audio'].ele.info.x, Elements['main'].ele.info.y
-    local maxLen = audio.data[1].len
-    for _, v in pairs(audio.data) do
-        if v.len > maxLen then maxLen = v.len end
-    end
-    local gap = 1
-    local itemH = FontSize2 + Margin / 2
-    local w = math.floor(maxLen) + Margin * 2
-    local x = x1 - w / 2
-    local h = audio.count * itemH + Margin + (audio.count - 1) * gap
-    local y = y1 - h
-    local main = Element.new(x, y, w, h, Style.panel, '', PanelR)
-    EleAudio['audioMain'] = { id = 1, type = 'panel', ele = main }
-    for i = 1, audio.count do
-        if audio.data[i].selected then
-            EleAudio['selected'] = { id = 2, type = 'panel',
-                ele = Element.new(x + Margin / 2, y + Margin / 2 + (itemH + gap) * (i - 1), math.floor(maxLen) + Margin,
-                    itemH, Style.hover, '', PanelR)
-            }
-        end
-        EleAudio['audioHover' .. i] = { id = 2 + i + audio.count * 2, type = 'hover', click = true,
-            selected = audio.data[i].selected, tId = audio.data[i].id,
-            ele = Element.new(x + Margin / 2, y + Margin / 2 + (itemH + gap) * (i - 1), math.floor(maxLen) + Margin,
-                itemH, Style.hover, '', PanelR)
-        }
-        EleAudio['audio' .. i] = { id = 2 + i, type = 'text',
-            ele = Element.new(x + Margin, y + Margin + (itemH + gap) * (i - 1) - (itemH - FontSize2) / 2, FontSize2,
-                FontSize2, Style.text, audio.data[i].title)
-        }
-        EleAudio['audio' .. (i + audio.count)] = { id = 2 + i + audio.count, type = 'text',
-            ele = Element.new(x + w - Margin / 2 - audio.data[i].text_len,
-                y + Margin + (itemH + gap) * (i - 1) - (itemH - FontSize2) / 2, FontSize2,
-                FontSize2, Style.text, audio.data[i].text)
-        }
-
-    end
+    if type == 'sub' then EleSub = info else EleAudio = info end
 end
 
 local function autoRender()
@@ -338,8 +299,8 @@ local function autoRender()
         local y = mouse_pos.y * 720 / H
         open.keep = Elements['main'].ele.mouseIn(x, y)
             or (open.volume and EleVol['volMain'].ele.mouseIn(x, y))
-            or (open.sub and EleSub['subMain'].ele.mouseIn(x, y))
-            or (open.audio and EleAudio['audioMain'].ele.mouseIn(x, y))
+            or (open.sub and EleSub['main'].ele.mouseIn(x, y))
+            or (open.audio and EleAudio['main'].ele.mouseIn(x, y))
         if open.keep then
             state.timer:kill()
         else
@@ -372,7 +333,8 @@ local function button_click(name, x, y)
                 open.audio = true
                 if open.volume then volumeHide() end
                 if open.sub then subHide() end
-                audioInit()
+                -- audioInit()
+                subAudioInit(Elements['audio'].ele.info.x, Elements['main'].ele.info.y, 'audio')
                 audioRender()
             end
         end,
@@ -383,7 +345,8 @@ local function button_click(name, x, y)
                 open.sub = true
                 if open.volume then volumeHide() end
                 if open.audio then audioHide() end
-                subInit()
+                -- subInit()
+                subAudioInit(Elements['sub'].ele.info.x, Elements['main'].ele.info.y, 'sub')
                 subRender()
             end
         end,
@@ -509,7 +472,6 @@ local function dispatch(source, what)
     local action = string.format("%s%s", source, what and ("_" .. what) or "")
 
     if action == 'mouse_move' then
-        -- local mouse_pos = mp.get_property_native('mouse-pos')
         autoRender()
         if open.keep then hover() end
     end
