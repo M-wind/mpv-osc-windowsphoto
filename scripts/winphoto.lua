@@ -85,12 +85,8 @@ local function init()
     local quit = Element.new(main.info.x + main.info.w - FontSize - Margin, Y, FontSize, FontSize, Style.text, Icons.quit)
     local length = time.duration < 3600 and time.len1 or time.len2
     local ty = main.info.y + (main.info.h - FontSize2) / 2 + 1.5
-    local _, sTime = TimeFormat(time.seconds)
-    local _, eTime = TimeFormat(time.duration)
-    local startT, endT = sTime, eTime
-    if time.seconds < 3600 and time.duration > 3600 then
-        startT = '00:' .. sTime
-    end
+    local startT, endT = TimeFormat(time.seconds), TimeFormat(time.duration)
+    if time.seconds < 3600 and time.duration > 3600 then startT = '00:' .. startT end
     local startTime = Element.new(volume.info.x + volume.info.w + Margin, ty, length, FontSize2, Style.text, startT)
     local endTime = Element.new(quit.info.x - Margin - length, ty, length, FontSize2, Style.text, endT)
     local ssx = startTime.info.x + length + Margin
@@ -449,12 +445,11 @@ local function click(action)
             length = Elements['videoLow'].ele.info.w
         end
         -- mp.commandv('seek', seconds, 'absolute+keyframes')
-
         time.seconds = seconds
         Elements['videoUp'].ele.info.w = length
         Elements['videoBar'].ele.info.x = Elements['videoLow'].ele.info.x + length -
             Elements['videoBar'].ele.info.w / 2
-        local _, text = TimeFormat(seconds)
+        local text = TimeFormat(seconds)
         if seconds < 3600 and time.duration > 3600 then text = '00:' .. text end
         Elements['startTime'].ele.info.text = text
         mainRender()
@@ -497,9 +492,9 @@ end)
 
 mp.observe_property("duration", "number", function(_, val)
     if val == nil then return end
-    local _, e1 = TimeFormat(time.duration)
+    local e1 = TimeFormat(time.duration)
     time.duration = val
-    local _, e = TimeFormat(val)
+    local e = TimeFormat(val)
     if #e1 ~= #e then init() end
     Elements['endTime'].ele.info.text = e
     if state.enable then mainRender() end
@@ -508,11 +503,8 @@ end)
 mp.observe_property("playback-time", "number", function(_, val)
     if val == nil or Elements['videoBar'].press then return end
     time.seconds = val
-    local _, cTime = TimeFormat(val)
-    local text = cTime
-    if val < 3600 and time.duration > 3600 then
-        text = '00:' .. cTime
-    end
+    local text = TimeFormat(val)
+    if val < 3600 and time.duration > 3600 then text = '00:' .. text end
     Elements['startTime'].ele.info.text = text
     local length                        = math.floor(val * Elements['videoLow'].ele.info.w / time.duration)
     Elements['videoUp'].ele.info.w      = length
