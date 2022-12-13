@@ -2,9 +2,9 @@ local utils = require 'mp.utils'
 local osd = mp.create_osd_overlay("ass-events")
 
 package.path = mp.find_config_file('scripts') .. '/?.lua'
-require('winphoto.Config')
-require('winphoto.Utils')
-local Element = require('winphoto.Element')
+require('shared.Config')
+require('shared.Utils')
+local Element = require('shared.Element')
 local Elements = {}
 local EleVol, EleSub, EleAudio = {}, {}, {}
 local sub, audio = {}, {}
@@ -526,7 +526,7 @@ mp.observe_property("duration", "number", function(_, val)
 end)
 
 mp.observe_property("playback-time", "number", function(_, val)
-    if val == nil or Elements['videoBar'].press then return end
+    if val == nil then return end
     local text = TimeFormat(val)
     if val < 3600 and time.duration > 3600 then text = '00:' .. text end
     Elements['startTime'].ele.info.text = text
