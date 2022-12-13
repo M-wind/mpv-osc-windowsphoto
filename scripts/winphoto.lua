@@ -29,7 +29,7 @@ local press = { vol = false, video = false }
 
 local function trueRender(tId, z, text)
     osd.id = tId
-    osd.data =  text
+    osd.data = text
     osd.z = z
     osd:update()
 end
@@ -498,6 +498,7 @@ mp.set_key_bindings({
     { "mbtn_left_dbl", 'ignore' },
 }, "input", "force")
 mp.observe_property('osd-dimensions', 'native', function(_, val)
+    if val.w == 0 then return end
     W, H = val.w, val.h
     init()
     remove(id.hover)
@@ -506,6 +507,12 @@ mp.observe_property('osd-dimensions', 'native', function(_, val)
         mp.commandv("script-message-to", "thumbfast", "clear")
         remove(100)
     end
+end)
+
+mp.observe_property("video-params", "native", function(_, val)
+    if W ~= 0 or not val then return end
+    W, H = val.w, val.h
+    init()
 end)
 
 mp.observe_property("duration", "number", function(_, val)
