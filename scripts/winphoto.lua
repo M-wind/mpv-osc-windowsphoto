@@ -1,19 +1,18 @@
 local utils = require 'mp.utils'
-local osd = mp.create_osd_overlay("ass-events")
+local osd = mp.create_osd_overlay('ass-events')
 
 package.path = mp.find_config_file('scripts') .. '/?.lua'
 require('shared.Config')
 require('shared.Utils')
 local Element = require('shared.Element')
-local Elements = {}
-local EleVol, EleSub, EleAudio = {}, {}, {}
+local Elements, EleVol, EleSub, EleAudio = {}, {}, {}, {}
 local sub, audio = {}, {}
-local id = { main = 1, hover = 2, sub = 3, audio = 4, volume = 5 }
+local id = { main = 1, hover = 2, sub = 3, audio = 4, volume = 5, thumbTime = 6 }
 local state = {
     volume = 100,
     volumeMax = 130,
     volumeTextLen = math.floor(Bounds('130', FontSize)),
-    timer,
+    timer = nil,
     enable = false,
     keyBind = false,
 }
@@ -68,12 +67,12 @@ local function do_enable_keybindings()
     if open.keep then
         if not state.keyBind then return end
         state.keyBind = false
-        mp.enable_key_bindings("input")
+        mp.enable_key_bindings('input')
     else
         if state.keyBind then return end
         state.keyBind = true
-        mp.disable_key_bindings("input")
-        mp.enable_key_bindings("mouse", "allow-vo-dragging+allow-hide-cursor")
+        mp.disable_key_bindings('input')
+        mp.enable_key_bindings('mouse', 'allow-vo-dragging+allow-hide-cursor')
     end
 end
 
@@ -162,7 +161,7 @@ local function hover()
             local len = x - Elements['videoLow'].ele.info.x
             local seconds = math.floor(len * time.duration / Elements['videoLow'].ele.info.w)
             local y = math.floor(H / 720 * Elements['main'].ele.info.y) - 10 - thumbfast.height
-            mp.commandv("script-message-to", "thumbfast", "thumb",
+            mp.commandv('script-message-to', 'thumbfast', 'thumb',
                 -- hovered time in seconds
                 seconds,
                 -- x
@@ -173,12 +172,12 @@ local function hover()
             local t = TimeFormat(seconds)
             local text = Element.new(x - Bounds(t, FontSize2) / 2, Elements['main'].ele.info.y, FontSize2, FontSize2,
                 Style.text, t).txt()
-            trueRender(100, 1001, text)
+            trueRender(id.thumbTime, 1001, text)
         end
     else
         if thumbfast.available then
-            mp.commandv("script-message-to", "thumbfast", "clear")
-            remove(100)
+            mp.commandv('script-message-to', 'thumbfast', 'clear')
+            remove(id.thumbTime)
         end
     end
 end
@@ -263,8 +262,7 @@ local function subAudioInit(x1, y1, type)
     local x = x1 - w / 2
     local h = data.count * itemH + Margin + (data.count - 1) * gap
     local y = y1 - h
-    local main = Element.new(x, y, w, h, Style.panel, '', PanelR)
-    info['main'] = { id = 1, type = 'panel', ele = main }
+    info['main'] = { id = 1, type = 'panel', ele = Element.new(x, y, w, h, Style.panel, '', PanelR) }
     for i = 1, data.count do
         if data.data[i].selected then
             info['selected'] = { id = 2, type = 'panel',
@@ -290,40 +288,13 @@ local function subAudioInit(x1, y1, type)
     if type == 'sub' then EleSub = info else EleAudio = info end
 end
 
-local function autoRender()
-    if not state.enable then
-        state.enable = true
-        mainRender()
-        state.timer = mp.add_timeout(0, hide)
-        state.timer:kill()
-        state.timer.timeout = 1
-        state.timer:resume()
-    else
-        local mouse_pos = mp.get_property_native('mouse-pos')
-        local x = mouse_pos.x * 720 / H
-        local y = mouse_pos.y * 720 / H
-        open.keep = Elements['main'].ele.mouseIn(x, y)
-            or (open.volume and EleVol['volMain'].ele.mouseIn(x, y))
-            or (open.sub and EleSub['main'].ele.mouseIn(x, y))
-            or (open.audio and EleAudio['main'].ele.mouseIn(x, y))
-        if open.keep then
-            state.timer:kill()
-        else
-            state.timer:kill()
-            state.timer.timeout = 1
-            state.timer:resume()
-        end
-    end
-    do_enable_keybindings()
-end
-
 local function button_click(name, x, y)
     local switchStr = {
         quit = function()
             mp.commandv('quit')
         end,
         play = function()
-            mp.set_property_bool("pause", not mp.get_property_bool("pause"))
+            mp.set_property_bool('pause', not mp.get_property_bool('pause'))
         end,
         videoLow = function()
             local len     = x - Elements['videoLow'].ele.info.x
@@ -338,7 +309,6 @@ local function button_click(name, x, y)
                 open.audio = true
                 if open.volume then volumeHide() end
                 if open.sub then subHide() end
-                -- audioInit()
                 subAudioInit(Elements['audio'].ele.info.x, Elements['main'].ele.info.y, 'audio')
                 audioRender()
             end
@@ -350,7 +320,6 @@ local function button_click(name, x, y)
                 open.sub = true
                 if open.volume then volumeHide() end
                 if open.audio then audioHide() end
-                -- subInit()
                 subAudioInit(Elements['sub'].ele.info.x, Elements['main'].ele.info.y, 'sub')
                 subRender()
             end
@@ -449,16 +418,17 @@ local function click(action)
         local length = x - Elements['videoLow'].ele.info.x
         local seconds = math.floor(length * time.duration / Elements['videoLow'].ele.info.w)
         -- mp.commandv('seek', seconds, 'absolute+keyframes')
-        if length < 0 then seconds = 0
+        if length < 0 then
+            seconds = 0
             length = 0
         end
-        if length > Elements['videoLow'].ele.info.w then seconds = time.duration
+        if length > Elements['videoLow'].ele.info.w then
+            seconds = time.duration
             length = Elements['videoLow'].ele.info.w
         end
         time.seconds = seconds
         Elements['videoUp'].ele.info.w = length
-        Elements['videoBar'].ele.info.x = Elements['videoLow'].ele.info.x + length -
-            Elements['videoBar'].ele.info.w / 2
+        Elements['videoBar'].ele.info.x = Elements['videoLow'].ele.info.x + length - Elements['videoBar'].ele.info.w / 2
         local text = TimeFormat(seconds)
         if seconds < 3600 and time.duration > 3600 then text = '00:' .. text end
         Elements['startTime'].ele.info.text = text
@@ -474,8 +444,35 @@ local function click(action)
 
 end
 
+local function autoRender()
+    if not state.enable then
+        state.enable = true
+        mainRender()
+        state.timer = mp.add_timeout(0, hide)
+        state.timer:kill()
+        state.timer.timeout = 1
+        state.timer:resume()
+    else
+        local mouse_pos = mp.get_property_native('mouse-pos')
+        local x = mouse_pos.x * 720 / H
+        local y = mouse_pos.y * 720 / H
+        open.keep = Elements['main'].ele.mouseIn(x, y)
+            or (open.volume and EleVol['volMain'].ele.mouseIn(x, y))
+            or (open.sub and EleSub['main'].ele.mouseIn(x, y))
+            or (open.audio and EleAudio['main'].ele.mouseIn(x, y))
+        if open.keep then
+            state.timer:kill()
+        else
+            state.timer:kill()
+            state.timer.timeout = 1
+            state.timer:resume()
+        end
+    end
+    do_enable_keybindings()
+end
+
 local function dispatch(source, what)
-    local action = string.format("%s%s", source, what and ("_" .. what) or "")
+    local action = string.format('%s%s', source, what and ('_' .. what) or '')
     if action == 'mouse_move' then
         autoRender()
         if open.keep then hover() end
@@ -489,33 +486,36 @@ local function dispatch(source, what)
 end
 
 mp.set_key_bindings({
-    { "mouse_move", function(e) dispatch("mouse_move", nil) end },
-    { "mbtn_left_dbl", 'ignore' },
-}, "mouse", "force")
+    { 'mouse_move', function(e) dispatch('mouse_move', nil) end },
+    { 'mbtn_left_dbl', 'ignore' },
+}, 'mouse', 'force')
 
 mp.set_key_bindings({
-    { "mbtn_left", function(e) dispatch("mbtn_left", "up") end, function(e) dispatch("mbtn_left", "down") end, },
-    { "mbtn_left_dbl", 'ignore' },
-}, "input", "force")
+    { 'mbtn_left', function(e) dispatch('mbtn_left', 'up') end, function(e) dispatch('mbtn_left', 'down') end, },
+    { 'mbtn_left_dbl', 'ignore' },
+}, 'input', 'force')
+
 mp.observe_property('osd-dimensions', 'native', function(_, val)
     if val.w == 0 then return end
-    W, H = val.w, val.h
-    init()
+    if val.w ~= W then
+        W, H = val.w, val.h
+        init()
+    end
     remove(id.hover)
     if not state.enable then autoRender() else mainRender() end
     if thumbfast.available then
-        mp.commandv("script-message-to", "thumbfast", "clear")
-        remove(100)
+        mp.commandv('script-message-to', 'thumbfast', 'clear')
+        remove(id.thumbTime)
     end
 end)
 
-mp.observe_property("video-params", "native", function(_, val)
+mp.observe_property('video-params', 'native', function(_, val)
     if W ~= 0 or not val then return end
     W, H = val.w, val.h
     init()
 end)
 
-mp.observe_property("duration", "number", function(_, val)
+mp.observe_property('duration', 'number', function(_, val)
     if val == nil then return end
     local e1 = TimeFormat(time.duration)
     time.duration = val
@@ -525,7 +525,7 @@ mp.observe_property("duration", "number", function(_, val)
     if state.enable and not press.video then mainRender() end
 end)
 
-mp.observe_property("playback-time", "number", function(_, val)
+mp.observe_property('playback-time', 'number', function(_, val)
     if val == nil then return end
     local text = TimeFormat(val)
     if val < 3600 and time.duration > 3600 then text = '00:' .. text end
@@ -537,7 +537,7 @@ mp.observe_property("playback-time", "number", function(_, val)
     if state.enable and not press.video then mainRender() end
 end)
 
-mp.observe_property("pause", "bool", function(_, val)
+mp.observe_property('pause', 'bool', function(_, val)
     if Elements['play'] == nil then return end
     Elements['play'].ele.info.text = val and Icons.play or Icons.pause
     if not state.enable then return end
@@ -547,6 +547,7 @@ end)
 mp.observe_property('volume-max', 'native', function(_, val)
     state.volumeMax = math.floor(val)
     state.volumeTextLen = math.floor(Bounds(state.volumeMax, FontSize))
+    if state.volume > state.volumeMax then state.volume = state.volumeMax end
     if open.volume then
         EleVol = {}
         volumeInit()
@@ -557,7 +558,6 @@ end)
 mp.observe_property('volume', 'native', function(_, val)
     state.volume = math.floor(val)
     if Elements['volume'] == nil or state.volume > state.volumeMax then return end
-    Elements['volume'].ele.info.text = VolIcon(state.volume)
     if EleVol['volMain'] ~= nil then
         local len = math.floor(state.volume * EleVol['volLow'].ele.info.w / state.volumeMax)
         EleVol['volIcon'].ele.info.text = VolIcon(state.volume)
@@ -568,14 +568,16 @@ mp.observe_property('volume', 'native', function(_, val)
         EleVol['volText'].ele.info.x = a_x + (state.volumeTextLen - len) / 2
         EleVol['volText'].ele.info.text = state.volume
     end
+    local flag = Elements['volume'].ele.info.text ~= VolIcon(state.volume)
+    if flag then Elements['volume'].ele.info.text = VolIcon(state.volume) end
     if state.enable then
         volumeRender()
-        mainRender()
+        if flag then mainRender() end
     end
 
 end)
 
-mp.observe_property("mute", 'bool', function(_, _)
+mp.observe_property('mute', 'bool', function(_, _)
     if Elements['volume'] == nil then return end
     Elements['volume'].ele.info.text = VolIcon(state.volume)
     if EleVol['volIcon'] ~= nil then EleVol['volIcon'].ele.info.text = VolIcon(state.volume) end
@@ -597,6 +599,7 @@ local function sub_pure(track)
         text_len = text_len,
     }
     sub.count = sub.count + 1
+    -- if track['default'] and not track['selected'] then mp.commandv('set', 'sub', track['id']) end
 end
 
 local function audio_pure(track)
@@ -654,35 +657,11 @@ mp.observe_property('demuxer-via-network', 'native', function(_, val)
     end)
 end)
 
-mp.register_script_message("thumbfast-info", function(json)
+mp.register_script_message('thumbfast-info', function(json)
     local data = utils.parse_json(json)
-    if type(data) ~= "table" or not data.width or not data.height then
-        msg.error("thumbfast-info: received json didn't produce a table with thumbnail information")
+    if type(data) ~= 'table' or not data.width or not data.height then
+        msg.error('thumbfast-info: received json didn\'t produce a table with thumbnail information')
     else
         thumbfast = data
     end
 end)
-
-
--- local assdraw = require 'mp.assdraw'
--- local ass = assdraw.ass_new()
--- local i = 3
--- mp.add_periodic_timer(0.5, function()
---     -- local style = '{\\pos(100, 100)\\bord0\\fnmpv-icon\\fs56\\frz' .. i .. '\\a10}' .. Icons.spinner
-
---     ass.text = ''
---     for j = 1, 4 do
---         ass:new_event()
---         ass:pos(100 + j * 50, 100)
---         ass:append(j == i and Style.cache or Style.low)
---         ass:draw_start()
---         ass:round_rect_cw(0, 0, 30, 30, 30 / 2)
---         ass:draw_stop()
---     end
---     i = i + 1
---     if  i > 4 then i = 1 end
-
---     osd.id = 100
---     osd.data = ass.text
---     osd:update()
--- end)
